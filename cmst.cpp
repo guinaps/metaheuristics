@@ -17,12 +17,16 @@ int currParents[100], neigParents[100], bestParents[100];   // referência do n�
 int currNumChild[100], neigNumChild[100], bestNumChild[100];   // número de descendentes na árvore geradora
 
 double T;   // temperatura do simulated annealing
+double reduceFactor;   // fator de redução da temperatura durante a heurística
+double Kb;   // constante usada no cálculo da probabilidade de transição para um pior estado
 int S;   // valor da função objetivo pro estado atual
 int neigS;   // valor da função objetivo pro estado vizinho
 int best;   // ótimo corrente
 long long countBetterTr, countWorseTr, countStay;   // contagem das transições a cada iteração da heurística
 long long countOptFinds;   // contagem de quantas vezes o ótimo foi atualizado
 
+CPUTimer timer;   // timer de tempo de CPU utilizado
+int execTime;   // tempo de execução da heurística
 
 // gerador de números aleatórios
 int randomNum(int hi) {
@@ -78,7 +82,11 @@ void init(char *argv[]) {
 	}
 	
 	// inicializando parâmetros da heurística
-	T = 10000000;
+	T = 20000000;			// 10,000,000
+	reduceFactor = 0.95;	// 0.95
+	Kb = 5e-6;				// 1e-5
+	execTime = atoi(argv[2]);
+
 	countBetterTr = countWorseTr = countStay = countOptFinds = 0;
 }
 
@@ -167,17 +175,21 @@ void updateBest() {
 }
 
 
-int main(int argc, char *argv[]) {
-	srand(time(NULL));
-	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS
+// função que determina o número de iterações para se atingir o equilíbrio em uma dada temperatura T
+int numIters(int temp) {
+	return max(temp/2, 3);
+}
 
-	init(argv);
 
-	S = calcObjFunc(currParents);
-	updateBest();
+// executa a heurística utilizando 'segs' segundos de tempo de CPU
+void execHeuristic(int segs) {
+	timer.reset();
 	
-	for (long long i = 0; i < 100000; i++) {
-		for (long long j = 0; j < T; j++) {
+	while (timer.getCPUTotalSecs() < segs) {
+		cout << timer.getCPUTotalSecs() << endl;
+		timer.start();
+		
+		for (long long j = 0; j < numIters(T); j++) {
 			genNeighbor();
 
 			neigS = calcObjFunc(neigParents);
@@ -188,9 +200,9 @@ int main(int argc, char *argv[]) {
 				countBetterTr++;
 			}
 			else {
-				double u = rand() / double(RAND_MAX);
+				double u = rand() / (double(RAND_MAX) + 1.0);
 				
-				if (u < exp(-delta / (1e-5 * T))) {
+				if (u < exp(-delta / (Kb * T))) {
 					switchState();
 					countWorseTr++;
 				}
@@ -205,11 +217,26 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-		T *= 0.9;
+		T *= reduceFactor;
+		timer.stop();
 	}
+}
 
-	cout << best << endl << endl;
+
+int main(int argc, char *argv[]) {
+	srand(time(NULL));
+	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS
+
+	init(argv);
 	
+	// inicializando melhor solução
+	S = calcObjFunc(currParents);
+	updateBest();
+	
+	execHeuristic(execTime);
+	
+	// imprimindo resultados
+	cout << endl << "BEST SOLUTION: " << best << endl << endl;
 	printTree(bestParents);	
 	printHeuristicStats();
 	
