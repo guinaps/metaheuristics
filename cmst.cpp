@@ -14,18 +14,42 @@ int N;   // número de nós do problema
 int C;   // restrição de capacidade do CMST
 int edgeCost[100][100];   // matriz de custos das arestas do grafo
 int currParents[100], neigParents[100], bestParents[100];   // referência do nó pai na árvore geradora
-int currNumChild[100], neigNumChild[100];   // número de descendentes na árvore geradora
+int currNumChild[100], neigNumChild[100], bestNumChild[100];   // número de descendentes na árvore geradora
 
 double T;   // temperatura do simulated annealing
 int S;   // valor da função objetivo pro estado atual
 int neigS;   // valor da função objetivo pro estado vizinho
 int best;   // ótimo corrente
+long long countBetterTr, countWorseTr, countStay;   // contagem das transições a cada iteração da heurística
+long long countOptFinds;   // contagem de quantas vezes o ótimo foi atualizado
 
 
 // gerador de números aleatórios
 int randomNum(int hi) {
-	const float scale = rand() / float(RAND_MAX);
+	const double scale = rand() / (double(RAND_MAX) + 1.0);
 	return int(scale*hi);
+}
+
+
+// imprime a árvore passada como parâmetro no formato dot do graphviz
+void printTree(int parents[]) {
+	cout << "graph cmst {" << endl;
+
+	for (int i = 0; i < N; i++) {
+		cout << i << " -- " << parents[i] << ";" << endl;
+	}
+	cout << "}" << endl;
+	cout << endl;
+}
+
+
+// imprime estatísticas sobre a execução da heurística
+void printHeuristicStats() {
+	cout << "Transitions to a better state: " << countBetterTr << endl;
+	cout << "Transitions to a worse state: " << countWorseTr << endl;
+	cout << "Iterations without transition: " << countStay << endl;
+	cout << "How many times a better solution was found: " << countOptFinds << endl;
+	cout << endl;
 }
 
 
@@ -55,6 +79,7 @@ void init(char *argv[]) {
 	
 	// inicializando parâmetros da heurística
 	T = 10000000;
+	countBetterTr = countWorseTr = countStay = countOptFinds = 0;
 }
 
 
@@ -89,7 +114,7 @@ int getCurrSubRoot(int node) {
 
 
 // verifica se 'node1' e 'node2' estão na mesma subárvore na árvore geradora corrente
-int isCurrSameSubTree(int node1, int node2) {
+bool isCurrSameSubTree(int node1, int node2) {
 	return (getCurrSubRoot(node1) == getCurrSubRoot(node2));
 }
 
@@ -104,7 +129,7 @@ void genNeighbor() {
 		newParent = randomNum(N+1);
 		newChild = randomNum(N+1);
 	} while (newParent == newChild || newParent == currParents[newChild] || isCurrAncestral(newChild, newParent) ||
-			(!isCurrSameSubTree(newParent, newChild) && currNumChild[getCurrSubRoot(newParent)] + currNumChild[newChild] + 2 > C));
+			(!isCurrSameSubTree(newParent, newChild) && (currNumChild[getCurrSubRoot(newParent)] + currNumChild[newChild] + 2 > C)));
 	
 	// gerando atributos do vizinho
 	copy(currParents, currParents + N+1, neigParents);
@@ -121,7 +146,7 @@ void genNeighbor() {
 		neigNumChild[presNode] -= neigNumChild[newChild] + 1;
 		presNode = neigParents[presNode];
 	}
-
+	
 	neigParents[newChild] = newParent;
 }
 
@@ -138,6 +163,7 @@ void switchState() {
 void updateBest() {
 	best = S;
 	copy(currParents, currParents + N+1, bestParents);
+	copy(currNumChild, currNumChild + N+1, bestNumChild);
 }
 
 
@@ -150,8 +176,8 @@ int main(int argc, char *argv[]) {
 	S = calcObjFunc(currParents);
 	updateBest();
 	
-	for (int i = 0; i < 100000; i++) {
-		for (int j = 0; j < T; j++) {
+	for (long long i = 0; i < 100000; i++) {
+		for (long long j = 0; j < T; j++) {
 			genNeighbor();
 
 			neigS = calcObjFunc(neigParents);
@@ -159,21 +185,23 @@ int main(int argc, char *argv[]) {
 			
 			if (delta < 0) {
 				switchState();
-//				cout << "melhor!" << endl;
+				countBetterTr++;
 			}
 			else {
 				double u = rand() / double(RAND_MAX);
 				
 				if (u < exp(-delta / (1e-5 * T))) {
 					switchState();
-//					cout << "pior mas foi!" << endl;
+					countWorseTr++;
 				}
-//				else cout << "pior e NAO foi!" << endl;
+				else {
+					countStay++;
+				}
 			}
 			
 			if (S < best) {
-				cout << "*** ACHEI MELHOR! ***" << endl;
 				updateBest();
+				countOptFinds++;
 			}
 		}
 		
@@ -182,11 +210,8 @@ int main(int argc, char *argv[]) {
 
 	cout << best << endl << endl;
 	
-	cout << "graph cmst {" << endl;
-	for (int i = 0; i < N; i++) {
-		cout << i << " -- " << bestParents[i] << ";" << endl;
-	}
-	cout << "}" << endl;
+	printTree(bestParents);	
+	printHeuristicStats();
 	
 	return 0;
 }
