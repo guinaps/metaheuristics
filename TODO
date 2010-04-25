@@ -1,0 +1,1 @@
+- corrigir bug: algo está errado na determinação da vizinhança, subárvores com 4 nós no caso c=3 estão aparecendo
