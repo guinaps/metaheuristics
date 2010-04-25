@@ -13,10 +13,13 @@ using namespace std;
 int N;   // número de nós do problema
 int C;   // restrição de capacidade do CMST
 int edgeCost[100][100];   // matriz de custos das arestas do grafo
-int currParents[100], neigParents[100];   // referência do nó pai na árvore geradora
+int currParents[100], neigParents[100], bestParents[100];   // referência do nó pai na árvore geradora
 int currNumChild[100], neigNumChild[100];   // número de descendentes na árvore geradora
 
 double T;   // temperatura do simulated annealing
+int S;   // valor da função objetivo pro estado atual
+int neigS;   // valor da função objetivo pro estado vizinho
+int best;   // ótimo corrente
 
 
 // gerador de números aleatórios
@@ -51,7 +54,7 @@ void init(char *argv[]) {
 	}
 	
 	// inicializando parâmetros da heurística
-	T = 1000;
+	T = 10000000;
 }
 
 
@@ -123,21 +126,65 @@ void genNeighbor() {
 }
 
 
+// transforma o estado vizinho atualmente armazenado no estado corrente
+void switchState() {
+	S = neigS;
+	copy(neigParents, neigParents + N+1, currParents);
+	copy(neigNumChild, neigNumChild + N+1, currNumChild);
+}
+
+
+// atualiza a melhor solução com o estado corrente
+void updateBest() {
+	best = S;
+	copy(currParents, currParents + N+1, bestParents);
+}
+
+
 int main(int argc, char *argv[]) {
 	srand(time(NULL));
-	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS X
+	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS
 
 	init(argv);
+
+	S = calcObjFunc(currParents);
+	updateBest();
 	
 	for (int i = 0; i < 100000; i++) {
-		genNeighbor();
-		copy(neigParents, neigParents + N+1, currParents);
-		copy(neigNumChild, neigNumChild + N+1, currNumChild);
+		for (int j = 0; j < T; j++) {
+			genNeighbor();
+
+			neigS = calcObjFunc(neigParents);
+			int delta = neigS - S;
+			
+			if (delta < 0) {
+				switchState();
+//				cout << "melhor!" << endl;
+			}
+			else {
+				double u = rand() / double(RAND_MAX);
+				
+				if (u < exp(-delta / (1e-5 * T))) {
+					switchState();
+//					cout << "pior mas foi!" << endl;
+				}
+//				else cout << "pior e NAO foi!" << endl;
+			}
+			
+			if (S < best) {
+				cout << "*** ACHEI MELHOR! ***" << endl;
+				updateBest();
+			}
+		}
+		
+		T *= 0.9;
 	}
 
-	cout << "graph oi {" << endl;
+	cout << best << endl << endl;
+	
+	cout << "graph cmst {" << endl;
 	for (int i = 0; i < N; i++) {
-		cout << i << " -- " << currParents[i] << ";" << endl;
+		cout << i << " -- " << bestParents[i] << ";" << endl;
 	}
 	cout << "}" << endl;
 	
