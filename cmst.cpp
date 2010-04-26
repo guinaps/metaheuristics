@@ -25,6 +25,8 @@ int best;   // ótimo corrente
 long long countTempChange;   // número de iterações de mudança de temperatura
 long long countBetterTr, countWorseTr, countStay;   // contagem das transições a cada iteração da heurística
 long long countOptFinds;   // contagem de quantas vezes o ótimo foi atualizado
+long long countTotalIters;   // contator de iterações totais da heurística
+long long countTrackIters;   // contagem de iterações registradas para exibição gráfica
 
 CPUTimer timer;   // timer de tempo de CPU utilizado
 int execTime;   // tempo de execução da heurística
@@ -65,6 +67,20 @@ void printHeuristicStats() {
 }
 
 
+// registra a iteração corrente da heurística para exibição gráfica
+void trackIteration() {	
+	timer.stop();
+	
+	countTrackIters++;
+	cerr << countTrackIters << ",";
+	cerr << timer.getCPUTotalSecs() << ",";
+	cerr << S << ",";
+	cerr << min(best, S) << endl;
+	
+	timer.start();
+}
+
+
 // inicializa os dados do problema e os parâmetros da heurística
 void init(char *argv[]) {
 	// inicializando restrição de capacidade
@@ -95,7 +111,7 @@ void init(char *argv[]) {
 	Kb = 5e-5;				// 1e-5
 	execTime = atoi(argv[2]);
 
-	countTempChange = countBetterTr = countWorseTr = countStay = countOptFinds = 0;
+	countTempChange = countBetterTr = countWorseTr = countStay = countOptFinds = countTrackIters = 0;
 }
 
 
@@ -194,7 +210,6 @@ void execHeuristic(int segs) {
 	timer.reset();
 	
 	while (timer.getCPUTotalSecs() < segs) {
-		//cout << timer.getCPUTotalSecs() << endl;
 		timer.start();
 		
 		long long iters = numIters(T);
@@ -220,10 +235,18 @@ void execHeuristic(int segs) {
 				}
 			}
 			
+			// registrando iteração
+			if (countTotalIters % 10000 == 0 || S < best) {
+				trackIteration();
+			}
+			
+			// atualizando melhor solução encontrada
 			if (S < best) {
 				updateBest();
 				countOptFinds++;
 			}
+			
+			countTotalIters++;
 		}
 		
 		timer.stop();
@@ -236,6 +259,9 @@ void execHeuristic(int segs) {
 int main(int argc, char *argv[]) {
 	srand(time(NULL));
 	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS
+	
+	cerr.setf(ios::fixed, ios::floatfield);
+	cerr.precision(5);
 
 	init(argv);
 	
