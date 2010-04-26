@@ -16,12 +16,13 @@ int edgeCost[100][100];   // matriz de custos das arestas do grafo
 int currParents[100], neigParents[100], bestParents[100];   // referência do nó pai na árvore geradora
 int currNumChild[100], neigNumChild[100], bestNumChild[100];   // número de descendentes na árvore geradora
 
-double T;   // temperatura do simulated annealing
+double initT, T;   // temperatura do simulated annealing
 double reduceFactor;   // fator de redução da temperatura durante a heurística
 double Kb;   // constante usada no cálculo da probabilidade de transição para um pior estado
 int S;   // valor da função objetivo pro estado atual
 int neigS;   // valor da função objetivo pro estado vizinho
 int best;   // ótimo corrente
+long long countTempChange;   // número de iterações de mudança de temperatura
 long long countBetterTr, countWorseTr, countStay;   // contagem das transições a cada iteração da heurística
 long long countOptFinds;   // contagem de quantas vezes o ótimo foi atualizado
 
@@ -49,6 +50,13 @@ void printTree(int parents[]) {
 
 // imprime estatísticas sobre a execução da heurística
 void printHeuristicStats() {
+	cout << "Initial temperature: " << initT << endl;
+	cout << "Reduction factor: " << reduceFactor << endl;
+	cout << "Kb: " << Kb << endl;
+	cout << "Execution time (seconds): " << execTime << endl;
+	cout << endl;
+	cout << "Number of temperature changes: " << countTempChange << endl;
+	cout << "Final temperature: " << T << endl;
 	cout << "Transitions to a better state: " << countBetterTr << endl;
 	cout << "Transitions to a worse state: " << countWorseTr << endl;
 	cout << "Iterations without transition: " << countStay << endl;
@@ -82,12 +90,18 @@ void init(char *argv[]) {
 	}
 	
 	// inicializando parâmetros da heurística
-	T = 20000000;			// 10,000,000
-	reduceFactor = 0.95;	// 0.95
-	Kb = 5e-6;				// 1e-5
+	initT = T = 10000000;	// 10,000,000
+	reduceFactor = 0.93;	// 0.95
+	Kb = 1e-5;				// 1e-5
 	execTime = atoi(argv[2]);
 
-	countBetterTr = countWorseTr = countStay = countOptFinds = 0;
+	countTempChange = countBetterTr = countWorseTr = countStay = countOptFinds = 0;
+}
+
+
+// função que determina o número de iterações para se atingir o equilíbrio em uma dada temperatura T
+int numIters(int temp) {
+	return max(temp, 100);
 }
 
 
@@ -175,18 +189,12 @@ void updateBest() {
 }
 
 
-// função que determina o número de iterações para se atingir o equilíbrio em uma dada temperatura T
-int numIters(int temp) {
-	return max(temp/2, 3);
-}
-
-
 // executa a heurística utilizando 'segs' segundos de tempo de CPU
 void execHeuristic(int segs) {
 	timer.reset();
 	
 	while (timer.getCPUTotalSecs() < segs) {
-		cout << timer.getCPUTotalSecs() << endl;
+		//cout << timer.getCPUTotalSecs() << endl;
 		timer.start();
 		
 		for (long long j = 0; j < numIters(T); j++) {
@@ -217,8 +225,9 @@ void execHeuristic(int segs) {
 			}
 		}
 		
-		T *= reduceFactor;
 		timer.stop();
+		T *= reduceFactor;
+		countTempChange++;
 	}
 }
 
