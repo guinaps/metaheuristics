@@ -91,8 +91,8 @@ void init(char *argv[]) {
 	
 	// inicializando parâmetros da heurística
 	initT = T = 10000000;	// 10,000,000
-	reduceFactor = 0.93;	// 0.95
-	Kb = 1e-5;				// 1e-5
+	reduceFactor = 0.94;	// 0.95
+	Kb = 5e-5;				// 1e-5
 	execTime = atoi(argv[2]);
 
 	countTempChange = countBetterTr = countWorseTr = countStay = countOptFinds = 0;
@@ -100,8 +100,8 @@ void init(char *argv[]) {
 
 
 // função que determina o número de iterações para se atingir o equilíbrio em uma dada temperatura T
-int numIters(int temp) {
-	return max(temp, 100);
+long long numIters(double temp) {
+	return (long long) max(temp, 10000.0);
 }
 
 
@@ -197,7 +197,8 @@ void execHeuristic(int segs) {
 		//cout << timer.getCPUTotalSecs() << endl;
 		timer.start();
 		
-		for (long long j = 0; j < numIters(T); j++) {
+		long long iters = numIters(T);
+		for (long long j = 0; j < iters; j++) {
 			genNeighbor();
 
 			neigS = calcObjFunc(neigParents);
