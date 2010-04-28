@@ -19,6 +19,7 @@ int currNumChild[100], neigNumChild[100], bestNumChild[100];   // número de des
 double initT, T;   // temperatura do simulated annealing
 double reduceFactor;   // fator de redução da temperatura durante a heurística
 double Kb;   // constante usada no cálculo da probabilidade de transição para um pior estado
+double iterFactor;   // constante usada no cálculo do número de iterações de equilíbrio para uma temperatura
 int S;   // valor da função objetivo pro estado atual
 int neigS;   // valor da função objetivo pro estado vizinho
 int best;   // ótimo corrente
@@ -55,10 +56,12 @@ void printHeuristicStats() {
 	cout << "Initial temperature: " << initT << endl;
 	cout << "Reduction factor: " << reduceFactor << endl;
 	cout << "Kb: " << Kb << endl;
+	cout << "Increasing factor of equilibrium iterations: " << iterFactor << endl;
 	cout << "Execution time (seconds): " << execTime << endl;
 	cout << endl;
 	cout << "Number of temperature changes: " << countTempChange << endl;
 	cout << "Final temperature: " << T << endl;
+	cout << "Total number of iterations: " << countTotalIters << endl;
 	cout << "Transitions to a better state: " << countBetterTr << endl;
 	cout << "Transitions to a worse state: " << countWorseTr << endl;
 	cout << "Iterations without transition: " << countStay << endl;
@@ -74,6 +77,7 @@ void trackIteration() {
 	countTrackIters++;
 	cerr << countTrackIters << ",";
 	cerr << timer.getCPUTotalSecs() << ",";
+	cerr << T << ",";
 	cerr << S << ",";
 	cerr << min(best, S) << endl;
 	
@@ -106,9 +110,10 @@ void init(char *argv[]) {
 	}
 	
 	// inicializando parâmetros da heurística
-	initT = T = 10000000;	// 10,000,000
-	reduceFactor = 0.94;	// 0.95
-	Kb = 5e-5;				// 1e-5
+	initT = T = 1500000;	// 11,000,000
+	reduceFactor = 0.98;	// 0.94
+	Kb = 5e-5;				// 5e-5
+	iterFactor = pow(C/5.0, 0.4);
 	execTime = atoi(argv[2]);
 
 	countTempChange = countBetterTr = countWorseTr = countStay = countOptFinds = countTrackIters = 0;
@@ -117,7 +122,8 @@ void init(char *argv[]) {
 
 // função que determina o número de iterações para se atingir o equilíbrio em uma dada temperatura T
 long long numIters(double temp) {
-	return (long long) max(temp, 10000.0);
+	return (long long) max(1100 * iterFactor * sqrt(temp), 10000.0);
+	//return (long long) max(temp, 10000.0);
 }
 
 
@@ -261,7 +267,7 @@ int main(int argc, char *argv[]) {
 	rand();   // descartando 1o número possivelmente idêntico para seeds diferentes no Mac OS
 	
 	cerr.setf(ios::fixed, ios::floatfield);
-	cerr.precision(5);
+	cerr.precision(4);
 
 	init(argv);
 	
