@@ -4,6 +4,8 @@
 #include <ctime>
 #include <iostream>
 #include <algorithm>
+#include <vector>
+#include <utility>
 
 #include "CPUTimer.h"
 
@@ -160,6 +162,24 @@ int getCurrSubRoot(int node) {
 // verifica se 'node1' e 'node2' estão na mesma subárvore na árvore geradora corrente
 bool isCurrSameSubTree(int node1, int node2) {
 	return (getCurrSubRoot(node1) == getCurrSubRoot(node2));
+}
+
+
+// gera uma solução válida inicial a partir do algoritmo de Esau-Williams randomizado
+void genStartSol() {
+	vector< pair<int, pair<int, int> > > savings;
+	
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			if (i != j) {
+				savings.push_back(make_pair(edgeCost[i][N], make_pair(i, j)));
+			}
+		}
+	}
+	
+	sort(savings.start(), savings.end());
+	
+	
 }
 
 
